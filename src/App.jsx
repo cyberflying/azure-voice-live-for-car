@@ -616,17 +616,12 @@ function App() {
                       </>
                     ) : (
                       <>
-                        <option value="en-US-Ava:DragonHDLatestNeural">Ava HD (Female, friendly)</option>
                         <option value="en-US-AvaNeural">Ava (Female, conversational)</option>
+                        <option value="en-US-Ava:DragonHDLatestNeural">Ava HD (Female, friendly)</option>
                         <option value="en-US-AndrewNeural">Andrew (Male, conversational)</option>
                         <option value="en-US-GuyNeural">Guy (Male, professional)</option>
                         <option value="en-US-AriaNeural">Aria (Female, cheerful)</option>
                         <option value="en-US-DavisNeural">Davis (Male, calm)</option>
-                        <option value="alloy">Alloy (OpenAI)</option>
-                        <option value="echo">Echo (OpenAI)</option>
-                        <option value="fable">Fable (OpenAI)</option>
-                        <option value="nova">Nova (OpenAI)</option>
-                        <option value="shimmer">Shimmer (OpenAI)</option>
                       </>
                     )}
                   </select>
