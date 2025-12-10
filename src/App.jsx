@@ -327,7 +327,7 @@ function App() {
     }
 
     if (!config.endpoint || !config.apiKey) {
-      alert('Please provide Endpoint and API Key');
+      alert('Please provide Endpoint and API Key, you can create a key from ai.azure.com.');
       return;
     }
 
@@ -687,7 +687,7 @@ function App() {
 
                 {/* API Key */}
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1 font-semibold">API Key</label>
+                  <label className="block text-xs text-gray-400 mb-1 font-semibold">API Key - <a href="https://ai.azure.com" target="_blank" rel="noopener noreferrer" className="underline">Get API Key/Endpoint Here 👈</a></label>
                   <input 
                     type="password" 
                     value={config.apiKey}

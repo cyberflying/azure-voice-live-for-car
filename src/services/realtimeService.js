@@ -24,6 +24,17 @@ export class RealtimeClient {
     // Construct the WebSocket URL
     let url = endpoint;
     
+    // Map AI Foundry URLs to Cognitive Services endpoints
+    // Example: https://build2025-demo-resource.services.ai.azure.com/api/projects/build2025-demo
+    // Maps to: https://build2025-demo-resource.cognitiveservices.azure.com/
+    if (url.includes('services.ai.azure.com/api/projects/')) {
+      const resourceNameMatch = url.match(/https?:\/\/([^.]+)\.services\.ai\.azure\.com/);
+      if (resourceNameMatch) {
+        const resourceName = resourceNameMatch[1];
+        url = `https://${resourceName}.cognitiveservices.azure.com`;
+      }
+    }
+    
     // Ensure protocol is wss://
     if (url.startsWith('http://')) {
         url = url.replace('http://', 'ws://');
