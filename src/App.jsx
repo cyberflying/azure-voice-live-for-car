@@ -575,10 +575,10 @@ function App() {
                         defaultVoice = 'alloy'; // OpenAI voice for LLM Realtime
                       } else if (category === 'LLM+TTS') {
                         defaultModel = 'gpt-realtime';
-                        defaultVoice = 'en-US-AvaMultilingualNeural'; // Azure voice for LLM+TTS
+                        defaultVoice = 'zh-CN-Xiaoxiao:DragonHDFlashLatestNeural'; // Azure voice for LLM+TTS
                       } else if (category === 'ASR+LLM+TTS') {
                         defaultModel = 'gpt-4o';
-                        defaultVoice = 'en-US-AvaMultilingualNeural'; // Azure voice for ASR+LLM+TTS
+                        defaultVoice = 'zh-CN-Xiaoxiao:DragonHDFlashLatestNeural'; // Azure voice for ASR+LLM+TTS
                       }
                       
                       const newSessionConfig = {...config.sessionConfig, model: defaultModel, voice: defaultVoice};
@@ -661,6 +661,7 @@ function App() {
                       </>
                     ) : (
                       <>
+                        <option value="zh-CN-Xiaoxiao:DragonHDFlashLatestNeural">Xiaoxiao HD (Female, warm)</option>
                         <option value="en-US-AvaMultilingualNeural">Ava (Female, conversational)</option>
                         <option value="en-US-Ava:DragonHDLatestNeural">Ava HD (Female, friendly)</option>
                         <option value="en-US-AndrewMultilingualNeural">Andrew (Male, conversational)</option>
