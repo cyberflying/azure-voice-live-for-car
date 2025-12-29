@@ -5,17 +5,23 @@
   "type": "module",
   "homepage": "https://novaaidesigner.github.io/azure-voice-live-for-car",
   "scripts": {
-    "dev": "vite",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "client": "vite",
+    "server": "node server/index.js",
     "build": "vite build",
+    "start": "node server/index.js",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "deploy": "vite build && gh-pages -d dist"
   },
   "dependencies": {
+    "@azure/identity": "^4.2.0",
+    "@azure/storage-blob": "^12.17.0",
+    "clsx": "^2.1.0",
+    "express": "^4.18.2",
+    "lucide-react": "^0.344.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "lucide-react": "^0.344.0",
-    "clsx": "^2.1.0",
     "tailwind-merge": "^2.2.1"
   },
   "devDependencies": {
@@ -23,6 +29,7 @@
     "@types/react-dom": "^18.2.21",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.18",
+    "concurrently": "^9.2.1",
     "eslint": "^8.57.0",
     "eslint-plugin-react": "^7.34.0",
     "eslint-plugin-react-hooks": "^4.6.0",

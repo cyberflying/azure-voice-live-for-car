@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Settings, Gauge, Play, Square, ChevronDown, ChevronUp, Radio, Navigation, Thermometer, RotateCcw } from 'lucide-react';
+import { Mic, MicOff, Settings, Gauge, Play, Square, ChevronDown, ChevronUp, Radio, Navigation, Thermometer, RotateCcw, Download, Upload, Cloud } from 'lucide-react';
 import { RealtimeClient } from './services/realtimeService';
+import { blobStorageService } from './services/blobStorageService';
 import { carTools, executeCarTool } from './tools/carTools';
 import { calculateEPASpeed, calculateBatteryConsumption, EPA_CYCLE_DURATION } from './utils/epaSimulator';
+import { AudioRecorder } from './utils/audioRecorder';
 import Statistics from './components/Statistics';
 
 function App() {
@@ -67,6 +69,8 @@ function App() {
   const [config, setConfig] = useState(() => {
     const savedEndpoint = getCookie('azure_endpoint');
     const savedApiKey = getCookie('azure_apiKey');
+    const savedStorageAccount = getCookie('azure_storage_account');
+    const savedContainerName = getCookie('azure_container_name');
     const initialSessionConfig = {
       modalities: ["text", "audio"],
       instructions: "You are a helpful car assistant, use simple and short oral response.",
@@ -96,7 +100,10 @@ function App() {
       apiVersion: '2025-10-01',
       modelCategory: 'LLM Realtime',
       model: 'gpt-realtime',
-      sessionConfig: initialSessionConfig
+      sessionConfig: initialSessionConfig,
+      // Azure Storage config
+      storageAccount: savedStorageAccount || '',
+      containerName: savedContainerName || ''
     };
   });
 
@@ -130,8 +137,14 @@ function App() {
   const nextPlayTimeRef = useRef(0);
   const logsEndRef = useRef(null);
   const firstAudioReceivedRef = useRef(false);
+  
+  // Audio Recorder for saving conversation
+  const audioRecorderRef = useRef(new AudioRecorder(24000));
+  const [audioFileReady, setAudioFileReady] = useState(false);
+  const [audioFilename, setAudioFilename] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
 
-  // Save endpoint and apiKey to cookies when they change
+  // Save endpoint, apiKey and storage config to cookies when they change
   useEffect(() => {
     if (config.endpoint) {
       setCookie('azure_endpoint', config.endpoint);
@@ -139,7 +152,15 @@ function App() {
     if (config.apiKey) {
       setCookie('azure_apiKey', config.apiKey);
     }
-  }, [config.endpoint, config.apiKey]);
+    if (config.storageAccount) {
+      setCookie('azure_storage_account', config.storageAccount);
+    }
+    if (config.containerName) {
+      setCookie('azure_container_name', config.containerName);
+    }
+    // Update blob storage service config (async call)
+    blobStorageService.updateConfig(config.storageAccount, config.containerName);
+  }, [config.endpoint, config.apiKey, config.storageAccount, config.containerName]);
 
   // Sync sessionConfigJson with sessionConfig
   useEffect(() => {
@@ -208,6 +229,11 @@ function App() {
           pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
         }
         
+        // Save user audio for recording
+        if (audioRecorderRef.current.isRecording) {
+          audioRecorderRef.current.addUserAudio(pcm16);
+        }
+        
         const base64Audio = btoa(String.fromCharCode.apply(null, new Uint8Array(pcm16.buffer)));
         
         if (clientRef.current && clientRef.current.ws && clientRef.current.ws.readyState === WebSocket.OPEN) {
@@ -220,6 +246,11 @@ function App() {
 
       source.connect(processor);
       processor.connect(audioContext.destination);
+
+      // 自动开始录音
+      audioRecorderRef.current.start();
+      setAudioFileReady(false);
+      setAudioFilename('');
 
       setIsRecording(true);
       addLog('🎤 Recording started');
@@ -241,8 +272,20 @@ function App() {
       mediaStreamRef.current.getTracks().forEach(track => track.stop());
       mediaStreamRef.current = null;
     }
+    
+    // 立即停止录音并准备文件
+    audioRecorderRef.current.stop();
+    const fileInfo = audioRecorderRef.current.getPreparedFile();
+    if (fileInfo.hasFile) {
+      setAudioFileReady(true);
+      setAudioFilename(fileInfo.filename);
+      addLog(`🎤 Recording stopped - File ready: ${fileInfo.filename}`);
+    } else {
+      setAudioFileReady(false);
+      addLog('🎤 Recording stopped');
+    }
+    
     setIsRecording(false);
-    addLog('🎤 Recording stopped');
   };
 
   const playAudio = async (base64Audio) => {
@@ -407,6 +450,11 @@ function App() {
         // Audio playback
         if (event.type === 'response.audio.delta') {
           if (event.delta) {
+            // Save assistant audio for recording (recording continues after mic stops)
+            if (audioRecorderRef.current.isRecording) {
+              audioRecorderRef.current.addAssistantAudio(event.delta);
+            }
+            
             // Calculate latency on first audio chunk
             if (!firstAudioReceivedRef.current && speechStartTimeRef.current) {
               const latency = Date.now() - speechStartTimeRef.current;
@@ -530,6 +578,48 @@ function App() {
     });
     
     addLog('🔄 Reset complete');
+  };
+
+  // Download the recorded audio file
+  const handleDownloadAudio = () => {
+    if (audioRecorderRef.current.hasReadyFile()) {
+      const result = audioRecorderRef.current.downloadWavFile();
+      if (result) {
+        addLog(`📁 Downloaded: ${result.filename}`);
+      }
+    } else {
+      addLog('⚠️ No audio file ready to download', 'warning');
+    }
+  };
+
+  // Upload the recorded audio file to Azure Blob Storage (using Managed Identity via server API)
+  const handleUploadAudio = async () => {
+    if (!blobStorageService.isConfigured()) {
+      addLog('⚠️ Azure Storage not configured. Please fill in Storage Account and Container Name.', 'warning');
+      return;
+    }
+    
+    const fileInfo = audioRecorderRef.current.getPreparedFile();
+    if (!fileInfo.hasFile) {
+      addLog('⚠️ No audio file ready to upload', 'warning');
+      return;
+    }
+    
+    setIsUploading(true);
+    addLog(`☁️ Uploading ${fileInfo.filename} to Azure Blob Storage...`);
+    
+    try {
+      const result = await blobStorageService.uploadBlob(fileInfo.blob, fileInfo.filename);
+      if (result.success) {
+        addLog(`✅ Uploaded successfully: ${result.url}`, 'assistant');
+      } else {
+        addLog(`❌ Upload failed: ${result.error}`, 'error');
+      }
+    } catch (error) {
+      addLog(`❌ Upload error: ${error.message}`, 'error');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -696,6 +786,45 @@ function App() {
                     disabled={isConnected}
                     className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
                   />
+                </div>
+
+                {/* Azure Storage Configuration */}
+                <div className="border-t border-gray-600 pt-3 mt-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Cloud size={14} className="text-blue-400" />
+                    <span className="text-xs text-gray-400 font-semibold">AZURE BLOB STORAGE (Optional)</span>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Storage Account</label>
+                      <input 
+                        type="text" 
+                        value={config.storageAccount}
+                        onChange={e => setConfig({...config, storageAccount: e.target.value})}
+                        className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-xs font-mono"
+                        placeholder="mystorageaccount"
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Container Name</label>
+                      <input 
+                        type="text" 
+                        value={config.containerName}
+                        onChange={e => setConfig({...config, containerName: e.target.value})}
+                        className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-xs font-mono"
+                        placeholder="audio-recordings"
+                      />
+                    </div>
+                    
+                    <div className="pt-2 text-xs text-gray-500">
+                      <p className="flex items-center gap-1">
+                        <span className="text-green-400">●</span>
+                        Uses Managed Identity (no login required)
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Advanced Settings */}
@@ -953,17 +1082,69 @@ function App() {
                 <div ref={logsEndRef} />
               </div>
 
-              {/* Microphone Button */}
-              <div className="border-t border-gray-700 p-4 flex justify-center">
-                <button 
-                  className={`p-6 rounded-full transition transform ${
-                    isRecording ? 'bg-red-500 scale-110 animate-pulse' : 'bg-blue-600 hover:bg-blue-700 hover:scale-105'
-                  } disabled:opacity-50 disabled:cursor-not-allowed`}
-                  onClick={() => isRecording ? stopRecording() : startRecording()}
-                  disabled={!isConnected}
-                >
-                  {isRecording ? <MicOff size={28} /> : <Mic size={28} />}
-                </button>
+              {/* Microphone Button and Download/Upload */}
+              <div className="border-t border-gray-700 p-4">
+                <div className="flex justify-center items-center gap-4">
+                  {/* Download Audio Button - Only show when file is ready */}
+                  {audioFileReady && (
+                    <button 
+                      onClick={handleDownloadAudio}
+                      className="p-3 rounded-full transition transform hover:scale-105 bg-green-600 hover:bg-green-700"
+                      title={`Download: ${audioFilename}`}
+                    >
+                      <Download size={20} />
+                    </button>
+                  )}
+
+                  {/* Microphone Button */}
+                  <button 
+                    className={`p-6 rounded-full transition transform ${
+                      isRecording ? 'bg-red-500 scale-110 animate-pulse' : 'bg-blue-600 hover:bg-blue-700 hover:scale-105'
+                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    onClick={() => isRecording ? stopRecording() : startRecording()}
+                    disabled={!isConnected}
+                  >
+                    {isRecording ? <MicOff size={28} /> : <Mic size={28} />}
+                  </button>
+
+                  {/* Upload Audio Button - Only show when file is ready */}
+                  {audioFileReady && (
+                    <button 
+                      onClick={handleUploadAudio}
+                      disabled={isUploading || !blobStorageService.isConfigured()}
+                      className={`p-3 rounded-full transition transform hover:scale-105 ${
+                        isUploading 
+                          ? 'bg-yellow-600 animate-pulse' 
+                          : blobStorageService.isConfigured()
+                            ? 'bg-blue-600 hover:bg-blue-700'
+                            : 'bg-gray-600 opacity-50 cursor-not-allowed'
+                      }`}
+                      title={
+                        isUploading 
+                          ? 'Uploading...' 
+                          : blobStorageService.isConfigured()
+                            ? `Upload to Azure: ${audioFilename}`
+                            : 'Configure Azure Storage to enable upload'
+                      }
+                    >
+                      <Upload size={20} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Recording Status */}
+                {isRecording && (
+                  <div className="mt-2 text-center text-xs text-gray-400">
+                    <span className="text-red-400 animate-pulse">● Recording conversation...</span>
+                  </div>
+                )}
+                
+                {/* Ready file info */}
+                {audioFileReady && !isRecording && (
+                  <div className="mt-2 text-center text-xs text-green-400">
+                    <span>✓ {audioFilename}</span>
+                  </div>
+                )}
               </div>
             </div>
 
