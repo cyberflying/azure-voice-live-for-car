@@ -3,8 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://novaaidesigner.github.io/azure-voice-live-for-car",
-  "scripts": {
+    "scripts": {
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "client": "vite",
     "server": "node server/index.js",
