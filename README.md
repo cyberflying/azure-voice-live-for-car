@@ -16,10 +16,17 @@ This is a Javascript (React + Vite) demo for the Azure Voice Live (Realtime API)
 
 ### Azure Web App Deployment
 
-This application is configured to deploy to Azure Web App. See [AZURE_DEPLOYMENT.md](./AZURE_DEPLOYMENT.md) for detailed deployment instructions.
+This application is configured to deploy to Azure Web App running on Node.js. See [AZURE_DEPLOYMENT.md](./AZURE_DEPLOYMENT.md) for detailed deployment instructions.
+
+**Application Architecture:**
+```
+Azure Web App (Node.js)
+├── Express (server/index.js) - API endpoints & static file serving
+└── React (Vite) - Built to dist/
+```
 
 **Quick Deploy Steps:**
-1. Configure GitHub Secret `AZURE_WEBAPP_PUBLISH_PROFILE` with your Azure Web App publish profile
+1. Create Azure Service Principal and configure GitHub Secret `AZURE_CREDENTIALS`
 2. Push to `main` branch to trigger automatic deployment via GitHub Actions
 3. Access your app at `https://hubcar.azurewebsites.net`
 

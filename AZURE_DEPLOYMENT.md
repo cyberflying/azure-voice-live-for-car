@@ -2,34 +2,72 @@
 
 本文档说明如何将此应用部署到 Azure Web App (hubcar)。
 
+## 应用架构
+
+```
+Azure Web App (Node.js)
+│
+├── Express (server/index.js)
+│   ├── /api/*              - API 端点
+│   └── static(dist/)       - 静态文件服务
+│
+└── React (Vite)
+    └── dist/               - 构建输出
+```
+
 ## 前置要求
 
 1. Azure 订阅
-2. Azure Web App 已创建（名称：hubcar）
-3. Node.js 运行时（推荐 20.x）
+2. Azure Web App 已创建（名称：hubcar，运行时：Node.js 20.x）
+3. Azure CLI（用于创建 Service Principal）
 
 ## 部署方式
 
 ### 方式一：GitHub Actions 自动部署（推荐）
 
-1. **获取 Azure Web App 发布配置文件**
-   - 登录 [Azure Portal](https://portal.azure.com)
-   - 导航到您的 Web App（hubcar）
-   - 点击 "Get publish profile" 下载发布配置文件
-   - 或使用 Azure CLI：
-     ```bash
-     az webapp deployment list-publishing-profiles --name hubcar --resource-group <your-resource-group> --xml
-     ```
+#### 1. 创建 Azure Service Principal
 
-2. **配置 GitHub Secrets**
-   - 进入 GitHub 仓库的 Settings > Secrets and variables > Actions
-   - 添加新的 secret：
-     - Name: `AZURE_WEBAPP_PUBLISH_PROFILE`
-     - Value: 粘贴发布配置文件的全部内容
+使用 Azure CLI 创建 Service Principal：
 
-3. **触发部署**
-   - 推送代码到 `main` 分支会自动触发部署
-   - 或在 Actions 标签页手动触发 "Deploy to Azure Web App" workflow
+```bash
+# 登录 Azure
+az login
+
+# 获取订阅 ID
+az account show --query id -o tsv
+
+# 创建 Service Principal（替换 <subscription-id> 和 <resource-group>）
+az ad sp create-for-rbac \
+  --name "hubcar-deployment" \
+  --role contributor \
+  --scopes /subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.Web/sites/hubcar \
+  --sdk-auth
+```
+
+输出示例：
+```json
+{
+  "clientId": "xxx",
+  "clientSecret": "xxx",
+  "subscriptionId": "xxx",
+  "tenantId": "xxx",
+  ...
+}
+```
+
+**重要**：复制整个 JSON 输出。
+
+#### 2. 配置 GitHub Secret
+
+- 进入 GitHub 仓库的 Settings > Secrets and variables > Actions
+- 添加新的 secret：
+  - Name: `AZURE_CREDENTIALS`
+  - Value: 粘贴步骤 1 中的完整 JSON 输出
+
+#### 3. 触发部署
+
+- 推送代码到 `main` 分支会自动触发部署
+- 或在 Actions 标签页手动触发 "Deploy to Azure Web App" workflow
 
 ### 方式二：Azure CLI 部署
 

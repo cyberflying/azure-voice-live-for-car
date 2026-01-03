@@ -6,28 +6,34 @@
 
 This PR configures all necessary files and settings to deploy the application to Azure Web App (hubcar).
 
+## 应用架构 / Application Architecture
+
+```
+Azure Web App (Node.js)
+│
+├── Express (server/index.js)
+│   ├── /api/*              - API 端点
+│   └── static(dist/)       - 静态文件服务
+│
+└── React (Vite)
+    └── dist/               - 构建输出
+```
+
+此应用直接运行在 Node.js 环境中，不使用 IIS。
+
+This application runs directly on Node.js environment, without IIS.
+
 ## 已完成的更改 / Changes Made
 
-### 1. 配置文件 / Configuration Files
-
-- **web.config**: IIS 配置文件，用于在 Azure Web App 上托管 Node.js 应用
-  - 配置 iisnode 模块
-  - URL 重写规则（静态文件和 SPA 路由）
-  - 请求超时和文件大小限制
-
-- **.deployment**: 指定自定义部署脚本
-  
-- **deploy.sh**: Kudu 部署脚本，处理依赖安装和构建过程
-
-### 2. GitHub Actions 工作流 / GitHub Actions Workflow
+### 1. GitHub Actions 工作流 / GitHub Actions Workflow
 
 - **.github/workflows/azure-deploy.yml**: 自动化部署到 Azure Web App
   - 在推送到 main 分支时触发
-  - 构建应用
-  - 创建部署包
-  - 部署到 Azure
+  - 使用 Azure Login action 进行身份验证（Service Principal）
+  - 构建应用（npm ci + npm run build）
+  - 直接部署整个项目到 Azure Web App
 
-### 3. 应用配置更新 / Application Configuration Updates
+### 2. 应用配置更新 / Application Configuration Updates
 
 - **vite.config.js**: 
   - 将 base 路径从 `/azure-voice-live-for-car/` 改为 `/` 以适配 Azure Web App
@@ -36,12 +42,17 @@ This PR configures all necessary files and settings to deploy the application to
   - 移除 homepage 字段
   - 将 deploy 脚本重命名为 deploy:github
 
-### 4. 文档 / Documentation
+### 3. 文档 / Documentation
 
 - **AZURE_DEPLOYMENT.md**: 详细的 Azure 部署指南（中文）
-  - 四种部署方式说明
-  - 配置步骤
+  - 包含应用架构说明
+  - Service Principal 创建步骤
+  - 多种部署方式说明
   - 故障排查指南
+  
+- **QUICKSTART.md**: 快速开始指南（中英文）
+  - Service Principal 配置步骤
+  - GitHub Secret 配置说明
   
 - **README.md**: 添加了 Azure 部署部分
 
@@ -49,19 +60,18 @@ This PR configures all necessary files and settings to deploy the application to
 
 ### 方法 1: GitHub Actions（推荐）
 
-1. **获取发布配置文件**：
-   - 登录 Azure Portal
-   - 进入 Web App (hubcar)
-   - 下载发布配置文件
-
-   或使用 CLI:
+1. **创建 Service Principal**：
    ```bash
-   az webapp deployment list-publishing-profiles --name hubcar --resource-group <resource-group> --xml
+   az ad sp create-for-rbac \
+     --name "hubcar-deployment" \
+     --role contributor \
+     --scopes /subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.Web/sites/hubcar \
+     --sdk-auth
    ```
 
 2. **配置 GitHub Secret**：
-   - 在仓库设置中添加 secret: `AZURE_WEBAPP_PUBLISH_PROFILE`
-   - 粘贴发布配置文件内容
+   - 在仓库设置中添加 secret: `AZURE_CREDENTIALS`
+   - 粘贴 Service Principal 的 JSON 输出
 
 3. **部署**：
    - 推送到 main 分支自动部署

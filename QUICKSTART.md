@@ -2,20 +2,37 @@
 
 ## 🚀 最快部署方式 / Fastest Deployment Method
 
-### 步骤 1: 获取 Azure 发布配置文件 / Step 1: Get Azure Publish Profile
+### 步骤 1: 创建 Azure Service Principal / Step 1: Create Azure Service Principal
 
-#### 选项 A: 使用 Azure Portal / Option A: Using Azure Portal
-1. 登录 [Azure Portal](https://portal.azure.com)
-2. 导航到你的 Web App: **hubcar**
-3. 点击顶部的 **"获取发布配置文件" / "Get publish profile"** 按钮
-4. 文件会自动下载（hubcar.PublishSettings）
+使用 Azure CLI 创建 Service Principal 并获取凭证：
 
-#### 选项 B: 使用 Azure CLI / Option B: Using Azure CLI
+Use Azure CLI to create a Service Principal and get credentials:
+
 ```bash
-az webapp deployment list-publishing-profiles \
-  --name hubcar \
-  --resource-group <your-resource-group> \
-  --xml
+# 登录 Azure / Login to Azure
+az login
+
+# 创建 Service Principal / Create Service Principal
+az ad sp create-for-rbac \
+  --name "hubcar-deployment" \
+  --role contributor \
+  --scopes /subscriptions/<your-subscription-id>/resourceGroups/<your-resource-group>/providers/Microsoft.Web/sites/hubcar \
+  --sdk-auth
+```
+
+这将输出 JSON 格式的凭证，复制整个 JSON 输出。
+
+This will output credentials in JSON format, copy the entire JSON output.
+
+输出示例 / Output example:
+```json
+{
+  "clientId": "<client-id>",
+  "clientSecret": "<client-secret>",
+  "subscriptionId": "<subscription-id>",
+  "tenantId": "<tenant-id>",
+  ...
+}
 ```
 
 ### 步骤 2: 配置 GitHub Secret / Step 2: Configure GitHub Secret
@@ -28,8 +45,8 @@ az webapp deployment list-publishing-profiles \
 2. 点击 **"New repository secret"**
 
 3. 填写信息 / Fill in:
-   - **Name**: `AZURE_WEBAPP_PUBLISH_PROFILE`
-   - **Value**: 粘贴发布配置文件的完整内容 / Paste entire content of publish profile
+   - **Name**: `AZURE_CREDENTIALS`
+   - **Value**: 粘贴步骤 1 中的完整 JSON 输出 / Paste entire JSON output from Step 1
 
 4. 点击 **"Add secret"**
 
@@ -72,8 +89,8 @@ After deployment completes (about 2-3 minutes), visit:
 
 - [ ] Azure Web App "hubcar" 已创建 / Azure Web App "hubcar" is created
 - [ ] Web App 配置为 Node.js 20.x / Web App configured for Node.js 20.x
-- [ ] 已获取发布配置文件 / Publish profile obtained
-- [ ] GitHub Secret 已配置 / GitHub Secret configured
+- [ ] 已创建 Service Principal / Service Principal created
+- [ ] GitHub Secret `AZURE_CREDENTIALS` 已配置 / GitHub Secret configured
 - [ ] 代码已推送到仓库 / Code pushed to repository
 
 ## 🔧 Azure Web App 配置 / Azure Web App Configuration
