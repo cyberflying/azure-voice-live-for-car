@@ -84,7 +84,7 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
-app.listen(PORT, '127.0.0.1', () => {
-  console.log(`Server running on http://127.0.0.1:${PORT}`);
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
   console.log(`Using Managed Identity for Azure Blob Storage access`);
 });
