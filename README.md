@@ -12,6 +12,24 @@ This is a Javascript (React + Vite) demo for the Azure Voice Live (Realtime API)
 - **Benchmarking**: Tracks latency (simulated/basic) and token usage.
 - **Export to Calculator**: Export usage metrics to the VoiceLive Calculator for billing estimation.
 
+## Deployment
+
+### Azure Web App Deployment
+
+This application is configured to deploy to Azure Web App. See [AZURE_DEPLOYMENT.md](./AZURE_DEPLOYMENT.md) for detailed deployment instructions.
+
+**Quick Deploy Steps:**
+1. Configure GitHub Secret `AZURE_WEBAPP_PUBLISH_PROFILE` with your Azure Web App publish profile
+2. Push to `main` branch to trigger automatic deployment via GitHub Actions
+3. Access your app at `https://hubcar.azurewebsites.net`
+
+### GitHub Pages Deployment
+
+To deploy to GitHub Pages instead:
+```bash
+npm run deploy:github
+```
+
 ## Setup
 
 1.  **Install Dependencies**:
@@ -46,3 +64,6 @@ To use the demo, you need an Azure OpenAI resource with the Realtime API enabled
 - `src/App.jsx`: Main application logic and UI.
 - `src/services/realtimeService.js`: WebSocket client for Azure Realtime API.
 - `src/tools/carTools.js`: Tool definitions and execution logic.
+- `server/index.js`: Express server for Azure Web App hosting.
+- `web.config`: IIS configuration for Azure Web App.
+
