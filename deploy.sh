@@ -109,12 +109,12 @@ fi
 # 2. Select node version
 selectNodeVersion
 
-# 3. Install npm packages
+# 3. Install npm packages (all dependencies for build)
 if [ -e "$DEPLOYMENT_TARGET/package.json" ]; then
   cd "$DEPLOYMENT_TARGET"
-  echo "Running npm install --production"
-  eval $NPM_CMD install --production
-  exitWithMessageOnError "npm install failed"
+  echo "Running npm ci"
+  eval $NPM_CMD ci
+  exitWithMessageOnError "npm ci failed"
   cd - > /dev/null
 fi
 
@@ -124,6 +124,15 @@ if [ -e "$DEPLOYMENT_TARGET/package.json" ]; then
   echo "Running npm run build"
   eval $NPM_CMD run build
   exitWithMessageOnError "npm build failed"
+  cd - > /dev/null
+fi
+
+# 5. Clean up dev dependencies after build
+if [ -e "$DEPLOYMENT_TARGET/package.json" ]; then
+  cd "$DEPLOYMENT_TARGET"
+  echo "Pruning devDependencies"
+  eval $NPM_CMD prune --production
+  exitWithMessageOnError "npm prune failed"
   cd - > /dev/null
 fi
 

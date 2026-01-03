@@ -32,15 +32,35 @@ jobs:
 
       - name: Create deployment package
         run: |
+          # Verify dist directory exists
+          if [ ! -d "dist" ]; then
+            echo "Error: dist directory not found after build"
+            exit 1
+          fi
+          
+          # Create deployment directory
           mkdir -p deploy
-          cp -r dist deploy/
-          cp -r server deploy/
-          cp package.json deploy/
-          cp package-lock.json deploy/
-          cp web.config deploy/
+          
+          # Copy required files and directories
+          cp -r dist deploy/ || { echo "Failed to copy dist"; exit 1; }
+          cp -r server deploy/ || { echo "Failed to copy server"; exit 1; }
+          cp package.json deploy/ || { echo "Failed to copy package.json"; exit 1; }
+          cp package-lock.json deploy/ || { echo "Failed to copy package-lock.json"; exit 1; }
+          cp web.config deploy/ || { echo "Failed to copy web.config"; exit 1; }
+          
+          # Create zip package
           cd deploy
           zip -r ../deployment.zip .
           cd ..
+          
+          # Verify package was created
+          if [ ! -f "deployment.zip" ]; then
+            echo "Error: deployment.zip was not created"
+            exit 1
+          fi
+          
+          echo "Deployment package created successfully"
+          ls -lh deployment.zip
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v2
