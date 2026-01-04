@@ -3,15 +3,17 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-    "scripts": {
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
     "dev": "concurrently \"npm run server\" \"npm run client\"",
     "client": "vite",
     "server": "node server/index.js",
     "build": "vite build",
     "start": "node server/index.js",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview",
-    "deploy": "vite build && gh-pages -d dist"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@azure/identity": "^4.2.0",
@@ -33,7 +35,6 @@
     "eslint-plugin-react": "^7.34.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
-    "gh-pages": "^6.1.1",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
     "vite": "^5.1.6"
