@@ -32,10 +32,13 @@ jobs:
       - name: Build client
         run: npm run build
 
+      - name: Remove dev dependencies
+        run: npm prune --omit=dev
+
       - name: Zip app
         run: |
           mkdir -p package
-          cp -r server dist package.json package-lock.json package/
+          cp -r server dist node_modules package.json package-lock.json package/
           cd package && zip -r ../app.zip .
 
       - name: Upload artifact
