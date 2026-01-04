@@ -12,6 +12,7 @@ export class AudioRecorder {
     this.sessionId = null;  // 会话 UUID
     this.lastBlob = null;   // 最后生成的音频 Blob
     this.lastFilename = null; // 最后生成的文件名
+    this.pendingByte = null;  // 存储未配对的字节
   }
 
   // 生成 UUID
@@ -42,6 +43,7 @@ export class AudioRecorder {
     this.sessionId = this.generateUUID();
     this.lastBlob = null;
     this.lastFilename = null;
+    this.pendingByte = null;  // 重置
   }
 
   stop() {
@@ -67,16 +69,34 @@ export class AudioRecorder {
   addAssistantAudio(base64Audio) {
     if (this.isRecording && base64Audio) {
       const binaryString = atob(base64Audio);
-      const bytes = new Uint8Array(binaryString.length);
+      let bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
         bytes[i] = binaryString.charCodeAt(i);
       }
-      const pcm16 = new Int16Array(bytes.buffer);
-      this.audioChunks.push({
-        type: 'assistant',
-        data: pcm16,
-        timestamp: Date.now()
-      });
+
+      // 处理上次遗留的未配对字节
+      if (this.pendingByte !== null) {
+        const newBytes = new Uint8Array(1 + bytes.length);
+        newBytes[0] = this.pendingByte;
+        newBytes.set(bytes, 1);
+        bytes = newBytes;
+        this.pendingByte = null;
+      }
+
+      // 如果字节数是奇数，保存最后一个字节到下次
+      if (bytes.length % 2 !== 0) {
+        this.pendingByte = bytes[bytes.length - 1];
+        bytes = bytes.slice(0, bytes.length - 1);
+      }
+
+      if (bytes.length > 0) {
+        const pcm16 = new Int16Array(bytes.buffer, bytes.byteOffset, bytes.length / 2);
+        this.audioChunks.push({
+          type: 'assistant',
+          data: new Int16Array(pcm16),  // 复制一份
+          timestamp: Date.now()
+        });
+      }
     }
   }
 
@@ -219,6 +239,7 @@ export class AudioRecorder {
     this.lastFilename = null;
     this.startTime = null;
     this.sessionId = null;
+    this.pendingByte = null;  // 重置
   }
 
   hasData() {
