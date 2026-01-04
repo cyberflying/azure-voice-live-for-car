@@ -628,7 +628,7 @@ function App() {
       <header className="bg-gray-800 border-b border-gray-700 p-4">
         <div className="flex justify-between items-center max-w-7xl mx-auto">
           <h1 className="text-2xl font-bold text-blue-400 flex items-center gap-2">
-            <img src="https://devblogs.microsoft.com/foundry/wp-content/uploads/sites/89/2025/03/ai-foundry.png" alt="Azure AI" className="w-6 h-6 object-contain" />
+            <img src="/car.svg" alt="Azure AI" className="w-6 h-6 object-contain" />
             Microsoft Innovation hub - Car Assistant
           </h1>
           <div className={`text-sm font-semibold ${isConnected ? 'text-green-400' : 'text-gray-400'}`}>
