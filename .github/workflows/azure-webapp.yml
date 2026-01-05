@@ -27,10 +27,12 @@ jobs:
           cache: npm
 
       - name: Install deps
-        run: npm ci
+        run: npm ci --prefer-offline
 
       - name: Build client
         run: npm run build
+        env:
+          NODE_ENV: production
 
       - name: Remove dev dependencies
         run: npm prune --omit=dev
