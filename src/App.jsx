@@ -24,7 +24,7 @@ function App() {
   const [isConnected, setIsConnected] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [logs, setLogs] = useState([]);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(true);
   const [sessionConfigJson, setSessionConfigJson] = useState(JSON.stringify({
     modalities: ["text", "audio"],
     instructions: "You are a helpful car assistant, use simple and short oral response.",
@@ -136,6 +136,7 @@ function App() {
   const isPlayingRef = useRef(false);
   const nextPlayTimeRef = useRef(0);
   const logsEndRef = useRef(null);
+  const logsContainerRef = useRef(null);  // 新增：日志容器的 ref
   const firstAudioReceivedRef = useRef(false);
   
   // Audio Recorder for saving conversation
@@ -169,7 +170,9 @@ function App() {
 
   // Auto-scroll to bottom when new logs arrive
   useEffect(() => {
-    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (logs.length > 0 && logsContainerRef.current) {
+      logsContainerRef.current.scrollTop = logsContainerRef.current.scrollHeight;
+    }
   }, [logs]);
 
   // EPA Cycle Simulation for BEV
@@ -641,7 +644,7 @@ function App() {
       <div className="p-6 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           
-          {/* LEFT SIDEBAR: Configuration */}
+          {/* LEFT SIDEBAR: Configuration - 移除 Vehicle Status 面板后的结构 */}
           <div className="lg:col-span-1 space-y-6">
             {/* Configuration Panel */}
             <div className="bg-gray-800 p-5 rounded-lg border border-gray-700">
@@ -893,7 +896,7 @@ function App() {
                           }
                         }}
                         disabled={isConnected}
-                        className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-xs font-mono h-32 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-xs font-mono h-56 disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
                   </div>
@@ -918,141 +921,171 @@ function App() {
                 </div>
               </div>
             </div>
+          </div>
 
-            {/* Car Status Panel */}
-            <div className="bg-gray-800 p-5 rounded-lg border border-gray-700">
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Gauge size={18} /> Vehicle Status
-              </h2>
+          {/* RIGHT PANEL: Vehicle Status + Chat/Voice Interface */}
+          <div className="lg:col-span-3 flex flex-col gap-4 h-full">
+            
+            {/* Vehicle Status Panel - 优化布局 */}
+            <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-sm font-semibold flex items-center gap-2">
+                  <Gauge size={16} /> Vehicle Status
+                </h2>
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${carStatus.speed > 0 ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`}></span>
+                  <span className="text-xs text-gray-400">{carStatus.speed > 0 ? 'Driving' : 'Parked'}</span>
+                </div>
+              </div>
               
               <div className="space-y-3 text-sm">
-                {/* Basic Status */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-gray-700 p-2 rounded">
-                    <div className="text-gray-400 text-xs">Speed</div>
-                    <div className="font-mono text-lg">{carStatus.speed}</div>
-                    <div className="text-gray-500 text-xs">km/h</div>
-                  </div>
-                  <div className="bg-gray-700 p-2 rounded">
-                    <div className="text-gray-400 text-xs">Battery</div>
-                    <div className="font-mono text-lg">{carStatus.battery}%</div>
-                    <div className="text-gray-500 text-xs">{carStatus.batteryRange} km</div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="bg-gray-700 p-2 rounded">
-                    <div className="text-gray-400 text-xs">Lights</div>
-                    <div className="font-mono capitalize text-sm">{carStatus.lights}</div>
-                  </div>
-                  <div className="bg-gray-700 p-2 rounded">
-                    <div className="text-gray-400 text-xs">Windows</div>
-                    <div className="font-mono capitalize text-sm">{carStatus.windows}</div>
-                  </div>
-                </div>
-
-                {/* Climate Control */}
-                <div className="bg-gray-700 p-3 rounded border border-gray-600">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Thermometer size={14} className="text-orange-400" />
-                    <span className="text-xs text-gray-400 font-semibold">CLIMATE</span>
+                {/* 第一行：Speed, Battery, Climate, Lights, Windows - 5个等宽 */}
+                <div className="grid grid-cols-5 gap-3">
+                  {/* Speed */}
+                  <div className="bg-gradient-to-br from-gray-700 to-gray-750 p-3 rounded-lg border border-gray-600">
+                    <div className="text-gray-400 text-xs mb-1">Speed</div>
+                    <div className="flex items-baseline gap-1">
+                      <span className="font-mono text-xl font-bold text-white">{carStatus.speed}</span>
+                      <span className="text-gray-500 text-xs">km/h</span>
+                    </div>
                   </div>
                   
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs text-gray-400">Temperature</span>
-                    <div className="flex items-center gap-2">
+                  {/* Battery */}
+                  <div className="bg-gradient-to-br from-gray-700 to-gray-750 p-3 rounded-lg border border-gray-600">
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-gray-400 text-xs">Battery</span>
+                      <span className="text-xs text-gray-500">{carStatus.batteryRange}km</span>
+                    </div>
+                    <div className="flex items-baseline gap-1 mb-1">
+                      <span className={`font-mono text-xl font-bold ${carStatus.battery > 20 ? 'text-green-400' : 'text-red-400'}`}>
+                        {carStatus.battery}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-600 rounded-full h-1">
+                      <div 
+                        className={`h-1 rounded-full transition-all ${carStatus.battery > 20 ? 'bg-green-500' : 'bg-red-500'}`}
+                        style={{ width: `${carStatus.battery}%` }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  {/* Climate */}
+                  <div className="bg-gradient-to-br from-gray-700 to-gray-750 p-3 rounded-lg border border-gray-600">
+                    <div className="flex items-center gap-1 mb-1">
+                      <Thermometer size={12} className="text-orange-400" />
+                      <span className="text-gray-400 text-xs">Climate</span>
+                    </div>
+                    <div className="flex items-center justify-between">
                       <button
                         onClick={() => setCarStatus({...carStatus, temperature: Math.max(16, carStatus.temperature - 1)})}
-                        className="bg-gray-600 hover:bg-gray-500 text-white rounded px-2 py-1 text-xs"
-                      >
-                        −
-                      </button>
-                      <span className="text-white font-semibold text-sm min-w-[3rem] text-center">
+                        className="bg-gray-600 hover:bg-gray-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                      >−</button>
+                      <span className="font-mono text-lg font-bold text-orange-400">
                         {carStatus.temperature}°C
                       </span>
                       <button
                         onClick={() => setCarStatus({...carStatus, temperature: Math.min(30, carStatus.temperature + 1)})}
-                        className="bg-gray-600 hover:bg-gray-500 text-white rounded px-2 py-1 text-xs"
+                        className="bg-gray-600 hover:bg-gray-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                      >+</button>
+                    </div>
+                  </div>
+
+                  {/* Lights */}
+                  <div className="bg-gradient-to-br from-gray-700 to-gray-750 p-3 rounded-lg border border-gray-600">
+                    <div className="text-gray-400 text-xs mb-1">Lights</div>
+                    <div className={`font-mono text-xl font-bold capitalize ${carStatus.lights !== 'off' ? 'text-yellow-400' : 'text-gray-400'}`}>
+                      {carStatus.lights}
+                    </div>
+                  </div>
+
+                  {/* Windows */}
+                  <div className="bg-gradient-to-br from-gray-700 to-gray-750 p-3 rounded-lg border border-gray-600">
+                    <div className="text-gray-400 text-xs mb-1">Windows</div>
+                    <div className={`font-mono text-xl font-bold capitalize ${carStatus.windows !== 'closed' ? 'text-blue-400' : 'text-gray-400'}`}>
+                      {carStatus.windows}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 第二行：Media 和 Navigation - 各占一半宽度 */}
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Media Player */}
+                  <div className="bg-gradient-to-br from-gray-700 to-gray-750 p-3 rounded-lg border border-gray-600">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Radio size={14} className="text-blue-400" />
+                      <span className="text-gray-400 text-xs font-semibold">MEDIA</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <select 
+                        value={carStatus.mediaType}
+                        onChange={e => setCarStatus({...carStatus, mediaType: e.target.value})}
+                        className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-xs text-white"
                       >
-                        +
+                        <option value="radio">Radio</option>
+                        <option value="music">Music</option>
+                        <option value="podcast">Podcast</option>
+                        <option value="audiobook">Audiobook</option>
+                      </select>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs text-white font-medium truncate">
+                          {carStatus.mediaType === 'radio' && `📻 ${carStatus.radioStation}`}
+                          {carStatus.mediaType === 'music' && '🎵 My Playlist'}
+                          {carStatus.mediaType === 'podcast' && '🎙️ Tech Talk #127'}
+                          {carStatus.mediaType === 'audiobook' && '📖 Digital Fortress'}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-400">🔊</span>
+                        <input 
+                          type="range"
+                          min="0"
+                          max="100"
+                          value={carStatus.mediaVolume}
+                          onChange={e => setCarStatus({...carStatus, mediaVolume: parseInt(e.target.value)})}
+                          className="w-16 h-1.5 bg-gray-600 rounded-lg appearance-none slider cursor-pointer"
+                        />
+                        <span className="text-xs text-white font-mono w-8">{carStatus.mediaVolume}%</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Navigation */}
+                  <div className="bg-gradient-to-br from-gray-700 to-gray-750 p-3 rounded-lg border border-gray-600">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Navigation size={14} className={carStatus.navigationActive ? 'text-green-400' : 'text-gray-400'} />
+                      <span className="text-gray-400 text-xs font-semibold">NAVIGATION</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs text-white truncate">{carStatus.navigationDestination}</div>
+                        <div className="text-xs text-gray-500">{carStatus.navigationDistance}</div>
+                      </div>
+                      <button 
+                        onClick={() => setCarStatus({...carStatus, navigationActive: !carStatus.navigationActive})}
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                          carStatus.navigationActive 
+                            ? 'bg-green-600 hover:bg-green-700 text-white' 
+                            : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
+                        }`}
+                      >
+                        {carStatus.navigationActive ? '● Active' : 'Start'}
                       </button>
                     </div>
                   </div>
                 </div>
-
-                {/* Media Player */}
-                <div className="bg-gray-700 p-3 rounded border border-gray-600">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Radio size={14} className="text-blue-400" />
-                    <span className="text-xs text-gray-400 font-semibold">MEDIA</span>
-                  </div>
-                  
-                  {/* Media Type Selection */}
-                  <div className="mb-2">
-                    <select 
-                      value={carStatus.mediaType}
-                      onChange={e => setCarStatus({...carStatus, mediaType: e.target.value})}
-                      className="w-full bg-gray-600 border border-gray-500 rounded p-1 text-xs text-white"
-                    >
-                      <option value="radio">Radio</option>
-                      <option value="music">Music</option>
-                      <option value="podcast">Podcast</option>
-                      <option value="audiobook">Audiobook</option>
-                    </select>
-                  </div>
-
-                  {/* Current Media Info */}
-                  <div className="text-xs font-mono mb-2 text-gray-300">
-                    {carStatus.mediaType === 'radio' && carStatus.radioStation}
-                    {carStatus.mediaType === 'music' && 'My Playlist'}
-                    {carStatus.mediaType === 'podcast' && 'Tech Talk #127'}
-                    {carStatus.mediaType === 'audiobook' && 'Digital Fortress'}
-                  </div>
-
-                  {/* Volume Control */}
-                  <div className="mb-2">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-xs text-gray-400">Volume</span>
-                      <span className="text-xs text-white font-semibold">{carStatus.mediaVolume}%</span>
-                    </div>
-                    <input 
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={carStatus.mediaVolume}
-                      onChange={e => setCarStatus({...carStatus, mediaVolume: parseInt(e.target.value)})}
-                      className="w-full h-1 bg-gray-600 rounded-lg appearance-none slider"
-                    />
-                  </div>
-                </div>
-
-                {/* Navigator Status */}
-                <div className="bg-gray-700 p-3 rounded border border-gray-600">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Navigation size={14} className="text-green-400" />
-                    <span className="text-xs text-gray-400 font-semibold">NAVIGATION</span>
-                  </div>
-                  <div className="text-xs text-gray-300 mb-2">
-                    <div className="truncate">{carStatus.navigationDestination}</div>
-                    <div className="text-gray-500">{carStatus.navigationDistance}</div>
-                  </div>
-                  <button 
-                    onClick={() => setCarStatus({...carStatus, navigationActive: !carStatus.navigationActive})}
-                    className={`w-full py-1 rounded text-xs ${carStatus.navigationActive ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-600 hover:bg-gray-500'}`}
-                  >
-                    {carStatus.navigationActive ? 'Active' : 'Inactive'}
-                  </button>
-                </div>
               </div>
             </div>
-          </div>
 
-          {/* RIGHT PANEL: Chat/Voice Interface */}
-          <div className="lg:col-span-3 flex flex-col gap-6 h-full">
-            {/* Chat Panel - Flexible height */}
-            <div className="bg-gray-800 rounded-lg border border-gray-700 flex flex-col" style={{ height: 'calc(100vh - 480px)', minHeight: '400px' }}>
+            {/* Chat Panel - 减小高度 */}
+            <div className="bg-gray-800 rounded-lg border border-gray-700 flex flex-col" style={{ height: 'calc(100vh - 700px)', minHeight: '280px' }}>
               {/* Chat/Logs Area */}
-              <div className="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-1" style={{ maxHeight: '100%' }}>
+              <div 
+                ref={logsContainerRef}
+                className="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-1" 
+                style={{ maxHeight: '100%' }}
+              >
                 {logs.length === 0 && (
                   <div className="text-center text-gray-500 py-8">
                     <p className="text-sm">No messages yet</p>
@@ -1083,36 +1116,33 @@ function App() {
               </div>
 
               {/* Microphone Button and Download/Upload */}
-              <div className="border-t border-gray-700 p-4">
+              <div className="border-t border-gray-700 p-3">
                 <div className="flex justify-center items-center gap-4">
-                  {/* Download Audio Button - Only show when file is ready */}
                   {audioFileReady && (
                     <button 
                       onClick={handleDownloadAudio}
-                      className="p-3 rounded-full transition transform hover:scale-105 bg-green-600 hover:bg-green-700"
+                      className="p-2 rounded-full transition transform hover:scale-105 bg-green-600 hover:bg-green-700"
                       title={`Download: ${audioFilename}`}
                     >
-                      <Download size={20} />
+                      <Download size={18} />
                     </button>
                   )}
 
-                  {/* Microphone Button */}
                   <button 
-                    className={`p-6 rounded-full transition transform ${
+                    className={`p-5 rounded-full transition transform ${
                       isRecording ? 'bg-red-500 scale-110 animate-pulse' : 'bg-blue-600 hover:bg-blue-700 hover:scale-105'
                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                     onClick={() => isRecording ? stopRecording() : startRecording()}
                     disabled={!isConnected}
                   >
-                    {isRecording ? <MicOff size={28} /> : <Mic size={28} />}
+                    {isRecording ? <MicOff size={24} /> : <Mic size={24} />}
                   </button>
 
-                  {/* Upload Audio Button - Only show when file is ready */}
                   {audioFileReady && (
                     <button 
                       onClick={handleUploadAudio}
                       disabled={isUploading || !blobStorageService.isConfigured()}
-                      className={`p-3 rounded-full transition transform hover:scale-105 ${
+                      className={`p-2 rounded-full transition transform hover:scale-105 ${
                         isUploading 
                           ? 'bg-yellow-600 animate-pulse' 
                           : blobStorageService.isConfigured()
@@ -1127,28 +1157,26 @@ function App() {
                             : 'Configure Azure Storage to enable upload'
                       }
                     >
-                      <Upload size={20} />
+                      <Upload size={18} />
                     </button>
                   )}
                 </div>
 
-                {/* Recording Status */}
                 {isRecording && (
                   <div className="mt-2 text-center text-xs text-gray-400">
-                    <span className="text-red-400 animate-pulse">● Recording conversation...</span>
+                    <span className="text-red-400 animate-pulse">● Recording...</span>
                   </div>
                 )}
                 
-                {/* Ready file info */}
                 {audioFileReady && !isRecording && (
-                  <div className="mt-2 text-center text-xs text-green-400">
+                  <div className="mt-1 text-center text-xs text-green-400">
                     <span>✓ {audioFilename}</span>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Token Usage Panel - Below Chat */}
+            {/* Token Usage Panel */}
             <Statistics metrics={metrics} config={config} />
           </div>
         </div>
