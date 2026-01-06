@@ -24,7 +24,7 @@ function App() {
   const [isConnected, setIsConnected] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [logs, setLogs] = useState([]);
-  const [showAdvanced, setShowAdvanced] = useState(true);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [sessionConfigJson, setSessionConfigJson] = useState(JSON.stringify({
     modalities: ["text", "audio"],
     instructions: "You are a helpful car assistant, use simple and short oral response.",
@@ -670,7 +670,7 @@ function App() {
                         defaultModel = 'gpt-realtime';
                         defaultVoice = 'zh-CN-Xiaoxiao:DragonHDFlashLatestNeural'; // Azure voice for LLM+TTS
                       } else if (category === 'ASR+LLM+TTS') {
-                        defaultModel = 'gpt-4o';
+                        defaultModel = 'gpt-5-mini';
                         defaultVoice = 'zh-CN-Xiaoxiao:DragonHDFlashLatestNeural'; // Azure voice for ASR+LLM+TTS
                       }
                       
@@ -830,6 +830,24 @@ function App() {
                   </div>
                 </div>
 
+                {/* Connect and Reset Buttons */}
+                <div className="flex gap-2">
+                  <button 
+                    onClick={handleConnect}
+                    className={`flex-1 py-2 rounded font-semibold flex justify-center items-center gap-2 text-sm transition ${isConnected ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+                  >
+                    {isConnected ? <><Square size={16} /> Disconnect</> : <><Play size={16} /> Connect</>}
+                  </button>
+                  
+                  <button 
+                    onClick={handleReset}
+                    className="px-3 py-2 rounded font-semibold flex justify-center items-center transition bg-gray-600 hover:bg-gray-500"
+                    title="Reset chat and statistics"
+                  >
+                    <RotateCcw size={16} />
+                  </button>
+                </div>
+
                 {/* Advanced Settings */}
                 <button 
                   onClick={() => setShowAdvanced(!showAdvanced)}
@@ -896,29 +914,11 @@ function App() {
                           }
                         }}
                         disabled={isConnected}
-                        className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-xs font-mono h-56 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-xs font-mono h-32 disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
                   </div>
                 )}
-
-                {/* Connect and Reset Buttons */}
-                <div className="flex gap-2">
-                  <button 
-                    onClick={handleConnect}
-                    className={`flex-1 py-2 rounded font-semibold flex justify-center items-center gap-2 text-sm transition ${isConnected ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`}
-                  >
-                    {isConnected ? <><Square size={16} /> Disconnect</> : <><Play size={16} /> Connect</>}
-                  </button>
-                  
-                  <button 
-                    onClick={handleReset}
-                    className="px-3 py-2 rounded font-semibold flex justify-center items-center transition bg-gray-600 hover:bg-gray-500"
-                    title="Reset chat and statistics"
-                  >
-                    <RotateCcw size={16} />
-                  </button>
-                </div>
               </div>
             </div>
           </div>
@@ -929,35 +929,35 @@ function App() {
             {/* Vehicle Status Panel - 优化布局 */}
             <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-semibold flex items-center gap-2">
-                  <Gauge size={16} /> Vehicle Status
+                <h2 className="text-base font-semibold flex items-center gap-2">
+                  <Gauge size={18} /> Vehicle Status
                 </h2>
                 <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${carStatus.speed > 0 ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`}></span>
-                  <span className="text-xs text-gray-400">{carStatus.speed > 0 ? 'Driving' : 'Parked'}</span>
+                  <span className={`w-2.5 h-2.5 rounded-full ${carStatus.speed > 0 ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`}></span>
+                  <span className="text-sm text-gray-400">{carStatus.speed > 0 ? 'Driving' : 'Parked'}</span>
                 </div>
               </div>
               
-              <div className="space-y-3 text-sm">
+              <div className="space-y-3 text-base">
                 {/* 第一行：Speed, Battery, Climate, Lights, Windows - 5个等宽 */}
                 <div className="grid grid-cols-5 gap-3">
                   {/* Speed */}
                   <div className="bg-gradient-to-br from-gray-700 to-gray-750 p-3 rounded-lg border border-gray-600">
-                    <div className="text-gray-400 text-xs mb-1">Speed</div>
+                    <div className="text-gray-400 text-sm mb-1">Speed</div>
                     <div className="flex items-baseline gap-1">
-                      <span className="font-mono text-xl font-bold text-white">{carStatus.speed}</span>
-                      <span className="text-gray-500 text-xs">km/h</span>
+                      <span className="font-mono text-2xl font-bold text-white">{carStatus.speed}</span>
+                      <span className="text-gray-500 text-sm">km/h</span>
                     </div>
                   </div>
                   
                   {/* Battery */}
                   <div className="bg-gradient-to-br from-gray-700 to-gray-750 p-3 rounded-lg border border-gray-600">
                     <div className="flex justify-between items-center mb-1">
-                      <span className="text-gray-400 text-xs">Battery</span>
-                      <span className="text-xs text-gray-500">{carStatus.batteryRange}km</span>
+                      <span className="text-gray-400 text-sm">Battery</span>
+                      <span className="text-sm text-gray-500">{carStatus.batteryRange}km</span>
                     </div>
                     <div className="flex items-baseline gap-1 mb-1">
-                      <span className={`font-mono text-xl font-bold ${carStatus.battery > 20 ? 'text-green-400' : 'text-red-400'}`}>
+                      <span className={`font-mono text-2xl font-bold ${carStatus.battery > 20 ? 'text-green-400' : 'text-red-400'}`}>
                         {carStatus.battery}%
                       </span>
                     </div>
@@ -972,36 +972,36 @@ function App() {
                   {/* Climate */}
                   <div className="bg-gradient-to-br from-gray-700 to-gray-750 p-3 rounded-lg border border-gray-600">
                     <div className="flex items-center gap-1 mb-1">
-                      <Thermometer size={12} className="text-orange-400" />
-                      <span className="text-gray-400 text-xs">Climate</span>
+                      <Thermometer size={14} className="text-orange-400" />
+                      <span className="text-gray-400 text-sm">Climate</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <button
                         onClick={() => setCarStatus({...carStatus, temperature: Math.max(16, carStatus.temperature - 1)})}
-                        className="bg-gray-600 hover:bg-gray-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                        className="bg-gray-600 hover:bg-gray-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm"
                       >−</button>
-                      <span className="font-mono text-lg font-bold text-orange-400">
+                      <span className="font-mono text-xl font-bold text-orange-400">
                         {carStatus.temperature}°C
                       </span>
                       <button
                         onClick={() => setCarStatus({...carStatus, temperature: Math.min(30, carStatus.temperature + 1)})}
-                        className="bg-gray-600 hover:bg-gray-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
+                        className="bg-gray-600 hover:bg-gray-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm"
                       >+</button>
                     </div>
                   </div>
 
                   {/* Lights */}
                   <div className="bg-gradient-to-br from-gray-700 to-gray-750 p-3 rounded-lg border border-gray-600">
-                    <div className="text-gray-400 text-xs mb-1">Lights</div>
-                    <div className={`font-mono text-xl font-bold capitalize ${carStatus.lights !== 'off' ? 'text-yellow-400' : 'text-gray-400'}`}>
+                    <div className="text-gray-400 text-sm mb-1">Lights</div>
+                    <div className={`font-mono text-2xl font-bold capitalize ${carStatus.lights !== 'off' ? 'text-yellow-400' : 'text-gray-400'}`}>
                       {carStatus.lights}
                     </div>
                   </div>
 
                   {/* Windows */}
                   <div className="bg-gradient-to-br from-gray-700 to-gray-750 p-3 rounded-lg border border-gray-600">
-                    <div className="text-gray-400 text-xs mb-1">Windows</div>
-                    <div className={`font-mono text-xl font-bold capitalize ${carStatus.windows !== 'closed' ? 'text-blue-400' : 'text-gray-400'}`}>
+                    <div className="text-gray-400 text-sm mb-1">Windows</div>
+                    <div className={`font-mono text-2xl font-bold capitalize ${carStatus.windows !== 'closed' ? 'text-blue-400' : 'text-gray-400'}`}>
                       {carStatus.windows}
                     </div>
                   </div>
@@ -1012,14 +1012,14 @@ function App() {
                   {/* Media Player */}
                   <div className="bg-gradient-to-br from-gray-700 to-gray-750 p-3 rounded-lg border border-gray-600">
                     <div className="flex items-center gap-2 mb-2">
-                      <Radio size={14} className="text-blue-400" />
-                      <span className="text-gray-400 text-xs font-semibold">MEDIA</span>
+                      <Radio size={16} className="text-blue-400" />
+                      <span className="text-gray-400 text-sm font-semibold">MEDIA</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <select 
                         value={carStatus.mediaType}
                         onChange={e => setCarStatus({...carStatus, mediaType: e.target.value})}
-                        className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-xs text-white"
+                        className="bg-gray-600 border border-gray-500 rounded px-2 py-1 text-sm text-white"
                       >
                         <option value="radio">Radio</option>
                         <option value="music">Music</option>
@@ -1028,7 +1028,7 @@ function App() {
                       </select>
                       
                       <div className="flex-1 min-w-0">
-                        <div className="text-xs text-white font-medium truncate">
+                        <div className="text-sm text-white font-medium truncate">
                           {carStatus.mediaType === 'radio' && `📻 ${carStatus.radioStation}`}
                           {carStatus.mediaType === 'music' && '🎵 My Playlist'}
                           {carStatus.mediaType === 'podcast' && '🎙️ Tech Talk #127'}
@@ -1037,16 +1037,16 @@ function App() {
                       </div>
 
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-400">🔊</span>
+                        <span className="text-sm text-gray-400">🔊</span>
                         <input 
                           type="range"
                           min="0"
                           max="100"
                           value={carStatus.mediaVolume}
                           onChange={e => setCarStatus({...carStatus, mediaVolume: parseInt(e.target.value)})}
-                          className="w-16 h-1.5 bg-gray-600 rounded-lg appearance-none slider cursor-pointer"
+                          className="w-20 h-2 bg-gray-600 rounded-lg appearance-none slider cursor-pointer"
                         />
-                        <span className="text-xs text-white font-mono w-8">{carStatus.mediaVolume}%</span>
+                        <span className="text-sm text-white font-mono w-10">{carStatus.mediaVolume}%</span>
                       </div>
                     </div>
                   </div>
@@ -1054,17 +1054,17 @@ function App() {
                   {/* Navigation */}
                   <div className="bg-gradient-to-br from-gray-700 to-gray-750 p-3 rounded-lg border border-gray-600">
                     <div className="flex items-center gap-2 mb-2">
-                      <Navigation size={14} className={carStatus.navigationActive ? 'text-green-400' : 'text-gray-400'} />
-                      <span className="text-gray-400 text-xs font-semibold">NAVIGATION</span>
+                      <Navigation size={16} className={carStatus.navigationActive ? 'text-green-400' : 'text-gray-400'} />
+                      <span className="text-gray-400 text-sm font-semibold">NAVIGATION</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="min-w-0 flex-1">
-                        <div className="text-xs text-white truncate">{carStatus.navigationDestination}</div>
-                        <div className="text-xs text-gray-500">{carStatus.navigationDistance}</div>
+                        <div className="text-sm text-white truncate">{carStatus.navigationDestination}</div>
+                        <div className="text-sm text-gray-500">{carStatus.navigationDistance}</div>
                       </div>
                       <button 
                         onClick={() => setCarStatus({...carStatus, navigationActive: !carStatus.navigationActive})}
-                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                        className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
                           carStatus.navigationActive 
                             ? 'bg-green-600 hover:bg-green-700 text-white' 
                             : 'bg-gray-600 hover:bg-gray-500 text-gray-300'
@@ -1079,7 +1079,7 @@ function App() {
             </div>
 
             {/* Chat Panel - 减小高度 */}
-            <div className="bg-gray-800 rounded-lg border border-gray-700 flex flex-col" style={{ height: 'calc(100vh - 700px)', minHeight: '280px' }}>
+            <div className="bg-gray-800 rounded-lg border border-gray-700 flex flex-col" style={{ height: 'calc(100vh - 730px)', minHeight: '280px' }}>
               {/* Chat/Logs Area */}
               <div 
                 ref={logsContainerRef}
