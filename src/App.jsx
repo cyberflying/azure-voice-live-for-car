@@ -632,7 +632,7 @@ function App() {
         <div className="flex justify-between items-center max-w-7xl mx-auto">
           <h1 className="text-2xl font-bold text-blue-400 flex items-center gap-2">
             <img src="/car.svg" alt="Azure AI" className="w-6 h-6 object-contain" />
-            Microsoft Innovation hub - Car Assistant
+            Microsoft Innovation Hub - Car Assistant
           </h1>
           <div className={`text-sm font-semibold ${isConnected ? 'text-green-400' : 'text-gray-400'}`}>
             {isConnected ? '● Connected' : '● Disconnected'}
