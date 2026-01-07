@@ -24,7 +24,7 @@ function App() {
   const [isConnected, setIsConnected] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [logs, setLogs] = useState([]);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(true);
   const [sessionConfigJson, setSessionConfigJson] = useState(JSON.stringify({
     modalities: ["text", "audio"],
     instructions: "You are a helpful car assistant, use simple and short oral response.",
@@ -870,7 +870,7 @@ function App() {
                           setSessionConfigJson(JSON.stringify(newSessionConfig, null, 2));
                         }}
                         disabled={isConnected}
-                        className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-xs h-20 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-xs h-16 disabled:opacity-50 disabled:cursor-not-allowed"
                         placeholder="System instructions..."
                       />
                     </div>
