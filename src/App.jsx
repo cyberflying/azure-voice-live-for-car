@@ -14,6 +14,10 @@ function App() {
     document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/`;
   };
 
+  const deleteCookie = (name) => {
+    document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`;
+  };
+
   const getCookie = (name) => {
     return document.cookie.split('; ').reduce((r, v) => {
       const parts = v.split('=');
@@ -22,6 +26,7 @@ function App() {
   };
 
   const [isConnected, setIsConnected] = useState(false);
+  const [isSessionReady, setIsSessionReady] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [logs, setLogs] = useState([]);
   const [showAdvanced, setShowAdvanced] = useState(true);
@@ -149,15 +154,23 @@ function App() {
   useEffect(() => {
     if (config.endpoint) {
       setCookie('azure_endpoint', config.endpoint);
+    } else {
+      deleteCookie('azure_endpoint');
     }
     if (config.apiKey) {
       setCookie('azure_apiKey', config.apiKey);
+    } else {
+      deleteCookie('azure_apiKey');
     }
     if (config.storageAccount) {
       setCookie('azure_storage_account', config.storageAccount);
+    } else {
+      deleteCookie('azure_storage_account');
     }
     if (config.containerName) {
       setCookie('azure_container_name', config.containerName);
+    } else {
+      deleteCookie('azure_container_name');
     }
     // Update blob storage service config (async call)
     blobStorageService.updateConfig(config.storageAccount, config.containerName);
@@ -213,6 +226,11 @@ function App() {
   };
 
   const startRecording = async () => {
+    if (!isConnected || !isSessionReady) {
+      addLog('⚠️ Session is not ready yet. Wait for Session ready before recording.', 'warning');
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaStreamRef.current = stream;
@@ -368,16 +386,19 @@ function App() {
       clearAudioQueue();
       clientRef.current?.disconnect();
       setIsConnected(false);
+      setIsSessionReady(false);
       addLog('Disconnected');
       return;
     }
 
-    if (!config.endpoint || !config.apiKey) {
-      alert('Please provide Endpoint and API Key, you can create a key from ai.azure.com.');
+    if (!config.endpoint) {
+      alert('Please provide an Endpoint. If API Key is empty, the server will use DefaultAzureCredential.');
       return;
     }
 
     try {
+      addLog(`Connecting using ${config.apiKey ? 'API key' : 'DefaultAzureCredential'}...`);
+      setIsSessionReady(false);
       clientRef.current = new RealtimeClient(config);
       
       clientRef.current.on('open', () => {
@@ -386,22 +407,33 @@ function App() {
       });
 
       clientRef.current.on('error', (err) => {
-        addLog(`Error: ${err.message}`, 'error');
+        addLog(`Error: ${err?.message || 'Unknown connection error'}`, 'error');
         setIsConnected(false);
+        setIsSessionReady(false);
       });
 
-      clientRef.current.on('close', () => {
+      clientRef.current.on('close', (event) => {
         setIsConnected(false);
+        setIsSessionReady(false);
         stopRecording();
         clearAudioQueue();
-        addLog('Connection closed');
+        if (event?.code) {
+          addLog(`Connection closed (${event.code}${event.reason ? `: ${event.reason}` : ''})`);
+        } else {
+          addLog('Connection closed');
+        }
       });
 
       clientRef.current.on('message', async (event) => {
         console.log('Event:', event.type, event);
         
         // Session ready
-        if (event.type === 'session.updated' || event.type === 'session.created') {
+        if (event.type === 'session.created') {
+          addLog('Session created, waiting for configuration...');
+        }
+
+        if (event.type === 'session.updated') {
+          setIsSessionReady(true);
           addLog('✅ Session ready');
         }
         
@@ -446,7 +478,11 @@ function App() {
         
         if (event.type === 'response.audio_transcript.done') {
           if (event.transcript) {
-            addLog(`🤖 Assistant: ${event.transcript}`, 'assistant');
+            // Strip Voice Live cascade placeholder tokens like <|audio_text|>
+            const cleaned = event.transcript.replace(/<\|[^|]*\|>/g, '').trim();
+            if (cleaned) {
+              addLog(`🤖 Assistant: ${cleaned}`, 'assistant');
+            }
           }
         }
         
@@ -545,6 +581,7 @@ function App() {
     } catch (error) {
       addLog(`Connection failed: ${error.message}`, 'error');
       setIsConnected(false);
+      setIsSessionReady(false);
     }
   };
 
@@ -555,6 +592,7 @@ function App() {
       clearAudioQueue();
       clientRef.current?.disconnect();
       setIsConnected(false);
+      setIsSessionReady(false);
     }
     
     // Clear logs
@@ -711,20 +749,14 @@ function App() {
                       <>
                         <option value="gpt-realtime">gpt-realtime</option>
                         <option value="gpt-realtime-mini">gpt-realtime-mini</option>
-                        <option value="phi4-mm-realtime">phi4-mm-realtime</option>
                       </>
                     )}
                     {config.modelCategory === 'ASR+LLM+TTS' && (
                       <>
                         <option value="gpt-4o">gpt-4o</option>
-                        <option value="gpt-4o-mini">gpt-4o-mini</option>
-                        <option value="gpt-4.1">gpt-4.1</option>
-                        <option value="gpt-4.1-mini">gpt-4.1-mini</option>
                         <option value="gpt-5">gpt-5</option>
                         <option value="gpt-5-mini">gpt-5-mini</option>
                         <option value="gpt-5-nano">gpt-5-nano</option>
-                        <option value="gpt-5-chat">gpt-5-chat</option>
-                        <option value="phi4-mini">phi4-mini</option>
                       </>
                     )}
                   </select>
@@ -781,13 +813,14 @@ function App() {
 
                 {/* API Key */}
                 <div>
-                  <label className="block text-xs text-gray-400 mb-1 font-semibold">API Key - <a href="https://ai.azure.com" target="_blank" rel="noopener noreferrer" className="underline">Get API Key/Endpoint Here 👈</a></label>
+                  <label className="block text-xs text-gray-400 mb-1 font-semibold">API Key (optional) - <a href="https://ai.azure.com" target="_blank" rel="noopener noreferrer" className="underline">Get API Key/Endpoint Here 👈</a></label>
                   <input 
                     type="password" 
                     value={config.apiKey}
                     onChange={e => setConfig({...config, apiKey: e.target.value})}
                     disabled={isConnected}
                     className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                    placeholder="Leave empty to use DefaultAzureCredential via server proxy"
                   />
                 </div>
 
@@ -1133,7 +1166,7 @@ function App() {
                       isRecording ? 'bg-red-500 scale-110 animate-pulse' : 'bg-blue-600 hover:bg-blue-700 hover:scale-105'
                     } disabled:opacity-50 disabled:cursor-not-allowed`}
                     onClick={() => isRecording ? stopRecording() : startRecording()}
-                    disabled={!isConnected}
+                    disabled={!isConnected || !isSessionReady}
                   >
                     {isRecording ? <MicOff size={24} /> : <Mic size={24} />}
                   </button>

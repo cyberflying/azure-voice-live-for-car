@@ -1,14 +1,17 @@
 // Express server for Azure Web App with Managed Identity
 import express from 'express';
+import { createServer } from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import blobService from './blobService.js';
+import { attachRealtimeProxy } from './realtimeProxy.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+const server = createServer(app);
 
 // Parse JSON and raw binary data
 app.use(express.json());
@@ -84,7 +87,10 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
-app.listen(PORT, () => {
+attachRealtimeProxy(server);
+
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Using Managed Identity for Azure Blob Storage access`);
+  console.log('Realtime proxy available at /api/realtime');
 });

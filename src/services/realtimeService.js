@@ -5,6 +5,90 @@ export class RealtimeClient {
     this.listeners = {};
   }
 
+  buildAzureRealtimeUrl(endpoint, model, apiVersion) {
+    let url = endpoint;
+
+    if (url.includes('services.ai.azure.com/api/projects/')) {
+      const resourceNameMatch = url.match(/https?:\/\/([^.]+)\.services\.ai\.azure\.com/);
+      if (resourceNameMatch) {
+        const resourceName = resourceNameMatch[1];
+        url = `https://${resourceName}.cognitiveservices.azure.com`;
+      }
+    }
+
+    if (url.startsWith('http://')) {
+      url = url.replace('http://', 'ws://');
+    } else if (url.startsWith('https://')) {
+      url = url.replace('https://', 'wss://');
+    } else if (!url.startsWith('wss://') && !url.startsWith('ws://')) {
+      url = `wss://${url}`;
+    }
+
+    if (url.endsWith('/')) {
+      url = url.slice(0, -1);
+    }
+
+    if (url.includes('openai.azure.com')) {
+      const usesGaPath = url.includes('/openai/v1/realtime');
+
+      if (!usesGaPath && !url.includes('/openai/realtime')) {
+        url = `${url}/openai/realtime`;
+      }
+
+      const params = new URLSearchParams();
+      if (usesGaPath) {
+        if (!url.includes('model=') && model) {
+          params.append('model', model);
+        }
+      } else {
+        if (!url.includes('api-version=')) {
+          params.append('api-version', apiVersion || '2024-10-01-preview');
+        }
+        if (!url.includes('deployment=') && model) {
+          params.append('deployment', model);
+        }
+      }
+
+      if (params.toString()) {
+        url = `${url}${url.includes('?') ? '&' : '?'}${params.toString()}`;
+      }
+    } else if (url.includes('services.ai.azure.com') || url.includes('cognitiveservices.azure.com')) {
+      if (!url.includes('/voice-live/realtime')) {
+        url = `${url}/voice-live/realtime`;
+      }
+
+      const params = new URLSearchParams();
+      if (!url.includes('api-version=')) {
+        params.append('api-version', apiVersion || '2025-10-01');
+      }
+      if (!url.includes('model=') && model) {
+        params.append('model', model);
+      }
+
+      if (params.toString()) {
+        url = `${url}${url.includes('?') ? '&' : '?'}${params.toString()}`;
+      }
+    }
+
+    return url;
+  }
+
+  buildProxyUrl(endpoint, model, apiVersion) {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const proxyUrl = new URL(`${protocol}//${window.location.host}/api/realtime`);
+    proxyUrl.searchParams.set('endpoint', endpoint);
+
+    if (model) {
+      proxyUrl.searchParams.set('model', model);
+    }
+
+    if (apiVersion) {
+      proxyUrl.searchParams.set('apiVersion', apiVersion);
+    }
+
+    return proxyUrl.toString();
+  }
+
   on(event, callback) {
     if (!this.listeners[event]) {
       this.listeners[event] = [];
@@ -20,76 +104,15 @@ export class RealtimeClient {
 
   async connect() {
     const { endpoint, apiKey, model, apiVersion, sessionConfig } = this.config;
-    
-    // Construct the WebSocket URL
-    let url = endpoint;
-    
-    // Map AI Foundry URLs to Cognitive Services endpoints
-    // Example: https://build2025-demo-resource.services.ai.azure.com/api/projects/build2025-demo
-    // Maps to: https://build2025-demo-resource.cognitiveservices.azure.com/
-    if (url.includes('services.ai.azure.com/api/projects/')) {
-      const resourceNameMatch = url.match(/https?:\/\/([^.]+)\.services\.ai\.azure\.com/);
-      if (resourceNameMatch) {
-        const resourceName = resourceNameMatch[1];
-        url = `https://${resourceName}.cognitiveservices.azure.com`;
-      }
-    }
-    
-    // Ensure protocol is wss://
-    if (url.startsWith('http://')) {
-        url = url.replace('http://', 'ws://');
-    } else if (url.startsWith('https://')) {
-        url = url.replace('https://', 'wss://');
-    } else if (!url.startsWith('wss://') && !url.startsWith('ws://')) {
-        url = `wss://${url}`;
-    }
+    let url;
 
-    // Remove trailing slash
-    if (url.endsWith('/')) {
-        url = url.slice(0, -1);
-    }
-
-    // Determine path based on domain
-    if (url.includes('openai.azure.com')) {
-        // Azure OpenAI Realtime API
-        if (!url.includes('/openai/realtime')) {
-             url = `${url}/openai/realtime`;
-        }
-        const params = new URLSearchParams();
-        if (!url.includes('api-version')) {
-            params.append('api-version', apiVersion || '2024-10-01-preview');
-        }
-        if (!url.includes('deployment') && model) {
-            params.append('deployment', model);
-        }
-        if (params.toString()) {
-            url = `${url}${url.includes('?') ? '&' : '?'}${params.toString()}`;
-        }
-    } else if (url.includes('services.ai.azure.com') || url.includes('cognitiveservices.azure.com')) {
-        // Azure Voice Live API
-        if (!url.includes('/voice-live/realtime')) {
-             url = `${url}/voice-live/realtime`;
-        }
-        const params = new URLSearchParams();
-        if (!url.includes('api-version')) {
-            params.append('api-version', apiVersion || '2025-10-01');
-        }
-        if (!url.includes('model') && model) {
-            params.append('model', model);
-        }
-        if (params.toString()) {
-            url = `${url}${url.includes('?') ? '&' : '?'}${params.toString()}`;
-        }
-    }
-
-    // Add API Key if provided (as query param or header - WebSocket standard usually requires header or query param)
-    // For Azure, api-key header is preferred, but browser WebSocket API doesn't support custom headers easily.
-    // We'll try appending it to query param if not present, or rely on the user to include it in the URL if needed.
-    // However, Azure Realtime API supports `api-key` query parameter.
     if (apiKey) {
-        if (!url.includes('api-key')) {
-             url = `${url}${url.includes('?') ? '&' : '?'}${url.includes('openai.azure.com') ? 'api-key' : 'api-key'}=${apiKey}`;
-        }
+      url = this.buildAzureRealtimeUrl(endpoint, model, apiVersion);
+      if (!url.includes('api-key=')) {
+        url = `${url}${url.includes('?') ? '&' : '?'}api-key=${encodeURIComponent(apiKey)}`;
+      }
+    } else {
+      url = this.buildProxyUrl(endpoint, model, apiVersion);
     }
 
     console.log('Connecting to:', url); // Debug log (remove in production if sensitive)
@@ -123,6 +146,7 @@ export class RealtimeClient {
         type: "session.update",
         session: {
           ...sessionConfig,
+          model,
           voice: formattedVoice,
           input_audio_format: "pcm16",
           output_audio_format: "pcm16",
@@ -139,12 +163,16 @@ export class RealtimeClient {
       }
     };
 
-    this.ws.onerror = (error) => {
-      this.emit('error', error);
+    this.ws.onerror = () => {
+      this.emit('error', new Error('WebSocket connection error'));
     };
 
-    this.ws.onclose = () => {
-      this.emit('close');
+    this.ws.onclose = (event) => {
+      this.emit('close', {
+        code: event.code,
+        reason: event.reason,
+        wasClean: event.wasClean,
+      });
     };
   }
 
