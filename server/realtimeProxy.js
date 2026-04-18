@@ -1,5 +1,6 @@
 import { DefaultAzureCredential } from '@azure/identity';
 import { WebSocket, WebSocketServer } from 'ws';
+import { verifyClientPrincipal } from './auth.js';
 
 const REALTIME_PROTOCOL = 'realtime';
 const FOUNDARY_SCOPE = 'https://ai.azure.com/.default';
@@ -128,7 +129,15 @@ export function attachRealtimeProxy(server) {
       return;
     }
 
+    const authResult = verifyClientPrincipal(request.headers);
+    if (!authResult.ok) {
+      socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n');
+      socket.destroy();
+      return;
+    }
+
     proxyServer.handleUpgrade(request, socket, head, (clientSocket) => {
+      clientSocket.clientPrincipal = authResult.principal;
       proxyServer.emit('connection', clientSocket, request);
     });
   });

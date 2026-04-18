@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import blobService from './blobService.js';
 import { attachRealtimeProxy } from './realtimeProxy.js';
+import { requireClientPrincipal } from './auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,7 +31,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Initialize blob service endpoint
-app.post('/api/blob/init', (req, res) => {
+app.post('/api/blob/init', requireClientPrincipal, (req, res) => {
   try {
     const { storageAccount, containerName } = req.body;
     
@@ -50,7 +51,7 @@ app.post('/api/blob/init', (req, res) => {
 });
 
 // Upload blob endpoint
-app.put('/api/blob/upload/:filename', async (req, res) => {
+app.put('/api/blob/upload/:filename', requireClientPrincipal, async (req, res) => {
   try {
     if (!blobService.isInitialized()) {
       return res.status(400).json({ 

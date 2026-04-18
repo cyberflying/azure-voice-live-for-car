@@ -820,7 +820,7 @@ function App() {
                     onChange={e => setConfig({...config, apiKey: e.target.value})}
                     disabled={isConnected}
                     className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                    placeholder="Leave empty to use DefaultAzureCredential via server proxy"
+                    placeholder="Leave empty to use DefaultAzureCredential"
                   />
                 </div>
 
