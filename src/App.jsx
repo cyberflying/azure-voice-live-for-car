@@ -807,7 +807,7 @@ function App() {
                     onChange={e => setConfig({...config, endpoint: e.target.value})}
                     disabled={isConnected}
                     className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-xs font-mono disabled:opacity-50 disabled:cursor-not-allowed"
-                    placeholder="wss://resource.services.ai.azure.com"
+                    placeholder="https://<your-foundry-resource>.services.ai.azure.com/api/projects/<your-project>"
                   />
                 </div>
 
@@ -820,7 +820,7 @@ function App() {
                     onChange={e => setConfig({...config, apiKey: e.target.value})}
                     disabled={isConnected}
                     className="w-full bg-gray-700 border border-gray-600 rounded p-2 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-                    placeholder="Leave empty to use DefaultAzureCredential"
+                    placeholder="Leave empty to use default credential"
                   />
                 </div>
 
@@ -857,7 +857,7 @@ function App() {
                     <div className="pt-2 text-xs text-gray-500">
                       <p className="flex items-center gap-1">
                         <span className="text-green-400">●</span>
-                        Uses Managed Identity (no login required)
+                        Uses default credential (no login required)
                       </p>
                     </div>
                   </div>

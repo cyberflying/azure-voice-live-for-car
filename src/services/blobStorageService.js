@@ -56,7 +56,7 @@ export class BlobStorageService {
   }
 
   /**
-   * Upload a blob to Azure Storage via server API (uses Managed Identity)
+   * Upload a blob to Azure Storage via server API (uses default credential)
    * @param {Blob} blob - The blob to upload
    * @param {string} filename - The filename for the blob
    * @returns {Promise<{success: boolean, url?: string, error?: string}>}
